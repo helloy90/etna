@@ -38,7 +38,8 @@ public:
     vk::PipelineStageFlags2 pipeline_stage_flag,
     vk::AccessFlags2 access_flags,
     vk::ImageLayout layout,
-    vk::ImageAspectFlags aspect_flags);
+    vk::ImageAspectFlags aspect_flags,
+    uint32_t layer_count = 1);
 
   void setColorTarget(vk::CommandBuffer com_buffer, vk::Image image);
   void setDepthStencilTarget(

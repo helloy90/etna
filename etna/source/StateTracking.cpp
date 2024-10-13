@@ -27,7 +27,8 @@ void ResourceStates::setTextureState(
   vk::PipelineStageFlags2 pipeline_stage_flag,
   vk::AccessFlags2 access_flags,
   vk::ImageLayout layout,
-  vk::ImageAspectFlags aspect_flags)
+  vk::ImageAspectFlags aspect_flags,
+  uint32_t layer_count)
 {
   HandleType resHandle = std::bit_cast<HandleType>(static_cast<VkImage>(image));
   if (currentStates.count(resHandle) == 0)
@@ -59,7 +60,7 @@ void ResourceStates::setTextureState(
         .baseMipLevel = 0,
         .levelCount = 1,
         .baseArrayLayer = 0,
-        .layerCount = 1,
+        .layerCount = layer_count,
       },
   });
   oldState = newState;

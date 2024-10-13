@@ -106,6 +106,7 @@ Image create_image_from_bytes(
  * \param access_flags How will it be used?
  * \param layout What layout do we want it to be in?
  * \param aspect_flags Which aspects of the image will be used?
+ * \param layer_count How many layers does the image have? (default is 1)
  */
 void set_state(
   vk::CommandBuffer com_buffer,
@@ -113,7 +114,8 @@ void set_state(
   vk::PipelineStageFlagBits2 pipeline_stage_flag,
   vk::AccessFlags2 access_flags,
   vk::ImageLayout layout,
-  vk::ImageAspectFlags aspect_flags);
+  vk::ImageAspectFlags aspect_flags,
+  uint32_t layer_count = 1);
 
 /**
  * \brief Flushes all barriers resulting from set_state calls.

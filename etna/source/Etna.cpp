@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <etna/Etna.hpp>
 
 #include <memory>
@@ -155,10 +156,11 @@ void set_state(
   vk::PipelineStageFlagBits2 pipeline_stage_flag,
   vk::AccessFlags2 access_flags,
   vk::ImageLayout layout,
-  vk::ImageAspectFlags aspect_flags)
+  vk::ImageAspectFlags aspect_flags,
+  uint32_t layer_count)
 {
   etna::get_context().getResourceTracker().setTextureState(
-    com_buffer, image, pipeline_stage_flag, access_flags, layout, aspect_flags);
+    com_buffer, image, pipeline_stage_flag, access_flags, layout, aspect_flags, layer_count);
 }
 
 void finish_frame(vk::CommandBuffer com_buffer)
