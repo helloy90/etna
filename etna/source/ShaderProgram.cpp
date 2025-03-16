@@ -217,8 +217,6 @@ void ShaderProgramManager::ShaderProgramInternal::reload(ShaderProgramManager& m
   std::array<DescriptorSetInfo, MAX_PROGRAM_DESCRIPTORS> dstDescriptors;
   auto& descriptorLayoutCache = get_context().getDescriptorSetLayouts();
 
-  uint32_t usedDescriptorSetRange = 0;
-
   for (auto id : moduleIds)
   {
     auto& shaderMod = manager.getModule(id);
@@ -256,20 +254,16 @@ void ShaderProgramManager::ShaderProgramInternal::reload(ShaderProgramManager& m
 
       usedDescriptors.set(desc.first);
       dstDescriptors[desc.first].merge(desc.second);
-
-      usedDescriptorSetRange = std::max(desc.first + 1, usedDescriptorSetRange);
     }
   }
 
-  static constexpr DescriptorSetInfo NULL_DSET_INFO{};
-
   std::vector<vk::DescriptorSetLayout> vkLayouts;
 
-  for (uint32_t i = 0; i < usedDescriptorSetRange; i++)
+  for (uint32_t i = 0; i < MAX_PROGRAM_DESCRIPTORS; i++)
   {
-    const DescriptorSetInfo& dsetInfo =
-      usedDescriptors.test(i) ? dstDescriptors[i] : NULL_DSET_INFO;
-    auto res = descriptorLayoutCache.get(get_context().getDevice(), dsetInfo);
+    if (!usedDescriptors.test(i))
+      continue;
+    auto res = descriptorLayoutCache.get(get_context().getDevice(), dstDescriptors[i]);
     descriptorIds[i] = res.first;
     vkLayouts.push_back(res.second);
   }

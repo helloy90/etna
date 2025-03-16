@@ -219,9 +219,16 @@ static vk::UniqueDevice create_logical_device(
     },
   };
 
+  vk::PhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures =
+    params.descriptorIndexingFeatures;
+
+  vk::PhysicalDeviceFeatures2 features = params.features;
+  features.pNext =
+    const_cast<vk::PhysicalDeviceDescriptorIndexingFeatures*>(&descriptorIndexingFeatures);
+
   vk::PhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeature{
     // Evil const cast due to C not having const
-    .pNext = const_cast<vk::PhysicalDeviceFeatures2*>(&params.features), // NOLINT
+    .pNext = const_cast<vk::PhysicalDeviceFeatures2*>(&features), // NOLINT
     .dynamicRendering = vk::True,
   };
 
@@ -380,7 +387,8 @@ GlobalContext::GlobalContext(const InitParams& params)
   descriptorSetLayouts = std::make_unique<DescriptorSetLayoutCache>();
   shaderPrograms = std::make_unique<ShaderProgramManager>();
   pipelineManager = std::make_unique<PipelineManager>(vkDevice.get(), *shaderPrograms);
-  descriptorPool = std::make_unique<DynamicDescriptorPool>(vkDevice.get(), mainWorkStream);
+  perFrameDescriptorPool = std::make_unique<DynamicDescriptorPool>(vkDevice.get(), mainWorkStream);
+  persistentDescriptorPool = std::make_unique<PersistentDescriptorPool>(vkDevice.get());
   resourceTracking = std::make_unique<ResourceStates>();
 
   auto tempPool =
@@ -482,7 +490,12 @@ DescriptorSetLayoutCache& GlobalContext::getDescriptorSetLayouts()
 
 DynamicDescriptorPool& GlobalContext::getDescriptorPool()
 {
-  return *descriptorPool;
+  return *perFrameDescriptorPool;
+}
+
+PersistentDescriptorPool& GlobalContext::getPersistentDescriptorPool()
+{
+  return *persistentDescriptorPool;
 }
 
 ResourceStates& GlobalContext::getResourceTracker()
