@@ -59,7 +59,7 @@ DescriptorSet DynamicDescriptorPool::allocateSet(
   DescriptorLayoutId layout_id,
   std::vector<Binding> bindings,
   vk::CommandBuffer command_buffer,
-  BarrierBehavoir behavoir)
+  BarrierBehavior behavior)
 {
   auto& dslCache = get_context().getDescriptorSetLayouts();
   auto setLayouts = {dslCache.getVkLayout(layout_id)};
@@ -71,7 +71,31 @@ DescriptorSet DynamicDescriptorPool::allocateSet(
   vk::DescriptorSet vkSet{};
   ETNA_VERIFY(vkDevice.allocateDescriptorSets(&info, &vkSet) == vk::Result::eSuccess);
   return DescriptorSet{
-    workCount.batchIndex(), layout_id, vkSet, std::move(bindings), command_buffer, behavoir};
+    workCount.batchIndex(), layout_id, vkSet, std::move(bindings), command_buffer, behavior};
+}
+
+PersistentDescriptorPool::PersistentDescriptorPool(vk::Device dev)
+  : vkDevice{dev}
+  , pool{unwrap_vk_result(dev.createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
+      .maxSets = NUM_DESCRIPTORS,
+      .poolSizeCount = static_cast<std::uint32_t>(DEFAULT_POOL_SIZES.size()),
+      .pPoolSizes = DEFAULT_POOL_SIZES.data()}))}
+{
+}
+
+PersistentDescriptorSet PersistentDescriptorPool::allocateSet(
+  DescriptorLayoutId layout_id, std::vector<Binding> bindings)
+{
+  auto& dslCache = get_context().getDescriptorSetLayouts();
+  auto setLayouts = {dslCache.getVkLayout(layout_id)};
+
+  vk::DescriptorSetAllocateInfo info{};
+  info.setDescriptorPool(pool.get());
+  info.setSetLayouts(setLayouts);
+
+  vk::DescriptorSet vkSet{};
+  ETNA_VERIFY(vkDevice.allocateDescriptorSets(&info, &vkSet) == vk::Result::eSuccess);
+  return PersistentDescriptorSet{layout_id, vkSet, std::move(bindings)};
 }
 
 PersistentDescriptorPool::PersistentDescriptorPool(vk::Device dev)
