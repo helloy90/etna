@@ -35,6 +35,10 @@ struct InitParams
   /// Enable optional features like tessellation via this structure
   vk::PhysicalDeviceFeatures2 features{};
 
+  // Enable optional descriptor indexing features via this structure
+  // (if you need something like nonuniform indexing for bindless descriptor sets)
+  vk::PhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
+
   /// Use this to select a specific GPU or when automatic detection fails
   std::optional<uint32_t> physicalDeviceIndexOverride = std::nullopt;
 
