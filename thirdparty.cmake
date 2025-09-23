@@ -1,10 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 
-find_package(Vulkan 1.3.275 REQUIRED)
-if(Vulkan_VERSION VERSION_GREATER_EQUAL 1.4.0)
-  message(FATAL_ERROR "Vulkan sdk version >1.3.xxx not supported")
-endif()
+find_package(Vulkan 1.4.300 REQUIRED)
 
 # GPU-side allocator for Vulkan by AMD
 CPMAddPackage(
@@ -38,7 +35,7 @@ set_property(TARGET spirv-reflect-static PROPERTY SYSTEM TRUE)
 CPMAddPackage(
   NAME fmt
   GITHUB_REPOSITORY fmtlib/fmt
-  GIT_TAG 11.1.4
+  GIT_TAG 11.2.0
   OPTIONS
     "FMT_SYSTEM_HEADERS"
     "FMT_DOC OFF"
@@ -50,7 +47,7 @@ CPMAddPackage(
 CPMAddPackage(
   NAME spdlog
   GITHUB_REPOSITORY gabime/spdlog
-  VERSION 1.15.2
+  VERSION 1.15.3
   OPTIONS
     SPDLOG_FMT_EXTERNAL
 )
