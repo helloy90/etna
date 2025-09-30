@@ -40,6 +40,7 @@ public:
     vk::Image image;
     vk::ImageView view;
     vk::Semaphore available;
+    vk::Semaphore readyForPresent;
   };
 
   /**
@@ -77,9 +78,11 @@ public:
     bool vsync = false;
 
     /**
-     * Auto-gamma selects an Srgb image format for the swapchain, which assumes all
-     * writes to be in linear color space and automatically performs gamma-correction
-     * after each and every write to a swapchain image.
+     * Auto-gamma selects a Unorm image format for the swapchain, which indicates that
+     * the application used linear color space when writing to swapchain images and
+     * did not perform gamma-correction. This makes the OS do a gamma-correction of its own.
+     * When this property is false, Srgb is used for swapchain images, which tells the OS
+     * that gamma-correction has already been done.
      * Should be disabled whenever tone mapping is being performed manually in shaders.
      */
     bool autoGamma = true;
@@ -116,6 +119,7 @@ private:
     // Now, we don't really know which image will be acquired next, so we have no choice
     // but to have a dedicated ring buffer of semaphores of the same size as the swapchain.
     std::vector<vk::UniqueSemaphore> imageAvailable;
+    std::vector<vk::UniqueSemaphore> imageReadyForPresent;
     std::size_t presentCounter = 0;
   };
 
