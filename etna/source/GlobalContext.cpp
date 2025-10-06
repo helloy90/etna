@@ -219,15 +219,12 @@ static vk::UniqueDevice create_logical_device(
     },
   };
 
-  vk::PhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures =
-    params.descriptorIndexingFeatures;
-
-  vk::PhysicalDeviceFeatures2 features = params.features;
-  features.pNext = &descriptorIndexingFeatures;
+  vk::PhysicalDeviceFeatures2 deviceFeatures = params.features;
+  // Evil const cast due to C not having const
+  deviceFeatures.pNext = const_cast<vk::PhysicalDeviceDescriptorIndexingFeatures*>(&params.descriptorIndexingFeatures); // NOLINT
 
   vk::PhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeature{
-    // Evil const cast due to C not having const
-    .pNext = const_cast<vk::PhysicalDeviceFeatures2*>(&features), // NOLINT
+    .pNext = &deviceFeatures,
     .dynamicRendering = vk::True,
   };
 
@@ -389,18 +386,17 @@ GlobalContext::GlobalContext(const InitParams& params)
   persistentDescriptorPool = std::make_unique<PersistentDescriptorPool>(vkDevice.get());
   resourceTracking = std::make_unique<ResourceStates>();
 
-  auto tempPool = etna::unwrap_vk_result(vkDevice->createCommandPoolUnique(
-    vk::CommandPoolCreateInfo{
+  auto tempPool =
+    etna::unwrap_vk_result(vkDevice->createCommandPoolUnique(vk::CommandPoolCreateInfo{
       .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
       .queueFamilyIndex = universalQueueFamilyIdx,
     }));
   auto buf = std::move(
-    etna::unwrap_vk_result(vkDevice->allocateCommandBuffersUnique(
-      vk::CommandBufferAllocateInfo{
-        .commandPool = tempPool.get(),
-        .level = vk::CommandBufferLevel::ePrimary,
-        .commandBufferCount = 1,
-      }))[0]);
+    etna::unwrap_vk_result(vkDevice->allocateCommandBuffersUnique(vk::CommandBufferAllocateInfo{
+      .commandPool = tempPool.get(),
+      .level = vk::CommandBufferLevel::ePrimary,
+      .commandBufferCount = 1,
+    }))[0]);
 
   // Workaround for issues in Tracy =(
 #ifdef TRACY_ENABLE
