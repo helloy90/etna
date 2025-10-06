@@ -8,6 +8,7 @@
 
 #include "StateTracking.hpp"
 #include "DebugUtils.hpp"
+#include "etna/GpuWorkCount.hpp"
 
 
 namespace etna
@@ -22,7 +23,7 @@ static vk::SurfaceFormatKHR chose_surface_format(
 
   auto selected = formats[0];
 
-  const auto desiredFormat = auto_gamma ? vk::Format::eB8G8R8A8Srgb : vk::Format::eB8G8R8A8Unorm;
+  const auto desiredFormat = auto_gamma ? vk::Format::eB8G8R8A8Unorm : vk::Format::eB8G8R8A8Srgb;
 
   auto found = std::find_if(
     formats.begin(), formats.end(), [&desiredFormat](const vk::SurfaceFormatKHR& format) {
@@ -80,9 +81,6 @@ Window::Window(const Dependencies& deps, CreateInfo info)
   , surface(std::move(info.surface))
   , queueFamily{deps.queueFamily}
   , presentQueue{deps.presentQueue}
-  , imageAvailableSem(deps.workCount, [&deps](std::size_t) {
-    return unwrap_vk_result(deps.device.createSemaphoreUnique(vk::SemaphoreCreateInfo{}));
-  })
 {
 }
 
@@ -92,16 +90,23 @@ std::optional<Window::SwapchainImage> Window::acquireNext()
 
   if (swapchainInvalid)
     return std::nullopt;
+  const auto presentNo = currentSwapchain.presentCounter++;
 
-  auto sem = imageAvailableSem.get().get();
+  auto available =
+    currentSwapchain.imageAvailable[presentNo % currentSwapchain.imageAvailable.size()].get();
+
+  auto readyForPresent =
+    currentSwapchain.imageReadyForPresent[presentNo % currentSwapchain.imageReadyForPresent.size()]
+      .get();
 
   // This blocks on mobile when the swapchain has no available images.
   vk::AcquireNextImageInfoKHR info{
     .swapchain = currentSwapchain.swapchain.get(),
     .timeout = 100000000000,
-    .semaphore = sem,
+    .semaphore = available,
     .deviceMask = 1,
   };
+
   uint32_t index;
   const auto res = device.acquireNextImage2KHR(&info, &index);
 
@@ -129,7 +134,8 @@ std::optional<Window::SwapchainImage> Window::acquireNext()
   return SwapchainImage{
     .image = element.image,
     .view = element.image_view.get(),
-    .available = sem,
+    .available = available,
+    .readyForPresent = readyForPresent,
   };
 }
 
@@ -193,6 +199,25 @@ Window::SwapchainData Window::createSwapchain(const DesiredProperties& props) co
     imageCount = std::min(imageCount, surfaceCaps.maxImageCount);
 
   SwapchainData newSwapchain;
+
+  newSwapchain.imageAvailable.resize(imageCount);
+  for (std::size_t i = 0; i < newSwapchain.imageAvailable.size(); ++i)
+  {
+    newSwapchain.imageAvailable[i] =
+      unwrap_vk_result(device.createSemaphoreUnique(vk::SemaphoreCreateInfo{}));
+    set_debug_name(
+      newSwapchain.imageAvailable[i].get(), fmt::format("Swapchain image {} available", i).c_str());
+  }
+
+  newSwapchain.imageReadyForPresent.resize(imageCount);
+  for (std::size_t i = 0; i < newSwapchain.imageReadyForPresent.size(); ++i)
+  {
+    newSwapchain.imageReadyForPresent[i] =
+      unwrap_vk_result(device.createSemaphoreUnique(vk::SemaphoreCreateInfo{}));
+    set_debug_name(
+      newSwapchain.imageReadyForPresent[i].get(),
+      fmt::format("Swapchain image {} ready for present", i).c_str());
+  }
 
   {
     vk::SwapchainCreateInfoKHR info{

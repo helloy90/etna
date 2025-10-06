@@ -17,7 +17,6 @@ PerFrameCmdMgr::PerFrameCmdMgr(const Dependencies &deps)
     return unwrap_vk_result(deps.device.createFenceUnique(vk::FenceCreateInfo{}));
   }}
   , commandsSubmitted{deps.workCount, std::in_place, false}
-  , gpuDone{unwrap_vk_result(deps.device.createSemaphoreUnique({}))}
 {
   vk::CommandBufferAllocateInfo cbInfo{
     .commandPool = pool.get(),
@@ -52,7 +51,8 @@ vk::CommandBuffer PerFrameCmdMgr::acquireNext()
   return curBuf;
 }
 
-vk::Semaphore PerFrameCmdMgr::submit(vk::CommandBuffer what, vk::Semaphore write_attachments_after)
+vk::Semaphore PerFrameCmdMgr::submit(
+  vk::CommandBuffer what, vk::Semaphore write_attachments_after, vk::Semaphore&& use_result_after)
 {
   ZoneScoped;
 
@@ -75,7 +75,7 @@ vk::Semaphore PerFrameCmdMgr::submit(vk::CommandBuffer what, vk::Semaphore write
   // here. Also, there are outstanding issues about this in VK spec, so...
   // https://github.com/KhronosGroup/Vulkan-Docs/issues/1308
   std::array signal{vk::SemaphoreSubmitInfo{
-    .semaphore = gpuDone.get(),
+    .semaphore = use_result_after,
     .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
     .deviceIndex = 0,
   }};
@@ -88,7 +88,7 @@ vk::Semaphore PerFrameCmdMgr::submit(vk::CommandBuffer what, vk::Semaphore write
 
   commandsSubmitted.get() = true;
 
-  return gpuDone.get();
+  return use_result_after;
 }
 
 } // namespace etna
